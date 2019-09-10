@@ -46,7 +46,7 @@ module Generic (A : Arch_litmus.Base)
       let code_pointer = Pointer (Base "ins_t")
 
       let typeof = function
-        | Constant.Concrete _ -> base
+        | Constant.Concrete c -> base
         | Constant.Symbolic _ -> pointer
         | Constant.Label _ -> code_pointer
 
@@ -79,8 +79,9 @@ module Generic (A : Arch_litmus.Base)
                match a with
                | LV (A.Location_reg (q,r),v) when p=q && A.reg_compare reg r = 0 ->
                    begin match typeof v,t with
-                   | (Base _ as t, Some (Base _)) ->
-                       Some t (* location takes precedence *)
+                   | (Base _, Some (Base _)) ->
+                      Some (A.typeof r)
+                   (*Some t (* location takes precedence *)*)
                    | (Pointer (Base s1), Some (Pointer (Base s2)))
                      when Misc.string_eq s1 s2 ->
                        t
@@ -136,11 +137,21 @@ module Generic (A : Arch_litmus.Base)
 
 (* final, only default types *)
       let type_atom a env = match a with
-      | ConstrGen.LV (loc,v) ->
-          A.LocMap.add loc (typeof v) env
-      | ConstrGen.LL _ -> env
+        | ConstrGen.LV (loc,v) -> A.LocMap.add loc (typeof v) env
+        | ConstrGen.LL _ -> env
 
-      let type_final final env = ConstrGen.fold_constr type_atom final env
+      let type_atom_final a env = match a with
+        | ConstrGen.LV (loc,v) ->
+           if A.arch = `X86_64 then
+             match loc with
+             | A.Location_reg (proc,r) -> A.LocMap.add loc (A.typeof r) env
+             | _ -> A.LocMap.add loc (typeof v) env
+           else
+             A.LocMap.add loc (typeof v) env
+        | ConstrGen.LL _ -> env
+
+      let type_final final env =
+        ConstrGen.fold_constr type_atom_final final env
 
       let type_prop prop env = ConstrGen.fold_prop type_atom prop env
 
@@ -203,7 +214,7 @@ module Generic (A : Arch_litmus.Base)
             bds in
         eprintf "%s: %s\n" tag (String.concat " " pp)
 
-      let debug = false
+      let debug = true
 
       let build_type_env init final filter flocs =
         let env = type_final final A.LocMap.empty in
@@ -240,17 +251,17 @@ module Generic (A : Arch_litmus.Base)
     end
 
 module Make
-    (O:Config)
-    (A:Arch_litmus.S)
-    (T:Test_litmus.S with
-     module A.V = A.V and
-type A.reg = A.reg and
-type A.location = A.location and
-module A.LocSet = A.LocSet and
-module A.LocMap = A.LocMap and
-type A.Out.t = A.Out.t and
-type P.code = int * A.pseudo list)
-    (C:XXXCompile_litmus.S with module A = A) =
+         (O:Config)
+         (A:Arch_litmus.S)
+         (T:Test_litmus.S with
+            module A.V = A.V and
+            type A.reg = A.reg and
+            type A.location = A.location and
+            module A.LocSet = A.LocSet and
+            module A.LocMap = A.LocMap and
+            type A.Out.t = A.Out.t and
+            type P.code = int * A.pseudo list)
+         (C:XXXCompile_litmus.S with module A = A) =
   struct
     open Printf
     open Constant
@@ -321,13 +332,13 @@ type P.code = int * A.pseudo list)
 (* Count specific instructions *)
 (*******************************)
 
-let count_ins p code =
-  List.fold_left
-    (A.pseudo_fold (fun k i  -> if p i then k+1 else k))
-    0 code
+    let count_ins p code =
+      List.fold_left
+        (A.pseudo_fold (fun k i  -> if p i then k+1 else k))
+        0 code
 
-let count_ret =
-  if do_self then fun code -> count_ins C.is_ret code else fun _ -> 0
+    let count_ret =
+      if do_self then fun code -> count_ins C.is_ret code else fun _ -> 0
 
 
 (****************)
@@ -448,7 +459,7 @@ let count_ret =
     let live_in_code code env live_in_final =
       List.fold_right live_in_ins code (env,live_in_final)
 
-    let debug = false
+    let debug = true
 (* Fixpoint *)
     let comp_fix  code live_in_final =
       if debug then
