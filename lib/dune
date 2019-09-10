@@ -1,6 +1,6 @@
-(ocamllex AArch64Lexer ARMLexer BellLexer CLexer lexHint lexOutMapping lexRename lexSplit lexUtils MIPSLexer modelLexer PPCLexer RISCVLexer runTypeUtils scopeLexer splitter stateLexer X86Lexer echo)
+(ocamllex AArch64Lexer ARMLexer BellLexer CLexer lexHint lexOutMapping lexRename lexSplit lexUtils MIPSLexer modelLexer PPCLexer RISCVLexer runTypeUtils scopeLexer splitter stateLexer X86Lexer X86_64Lexer echo)
 
-(ocamlyacc AArch64Parser CParser MIPSParser PPCParser    scopeParser  X86Parser ARMParser  LISAParser modelParser  RISCVParser  stateParser)
+(ocamlyacc AArch64Parser CParser MIPSParser PPCParser    scopeParser  X86Parser X86_64Parser ARMParser  LISAParser modelParser  RISCVParser  stateParser)
 
 (library
    (name herdtools)
