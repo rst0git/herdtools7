@@ -78,9 +78,9 @@ module Make
       val get_info : string -> T.t -> string option
       val get_prefetch_info : T.t -> string
 
-(* Condition *)          
+(* Condition *)
       val pp_cond : T.t -> string
-          
+
 (* Dump stuff *)
       module Dump : functor (O:Indent.S) -> functor(EPF:EmitPrintf.S) -> sig
         (* Some small dump functions common std/presi *)
@@ -111,7 +111,7 @@ module Make
 (*              eprintf "BUILD %s <%s>\n" s (CType.dump t) ; *)
               A.LocMap.add (A.Location_global s) t e)
             e test.T.globals in
-        let e = 
+        let e =
           List.fold_left
             (fun e (proc,(_,(outs, _))) ->
               List.fold_left
@@ -184,7 +184,7 @@ module Make
         let tr_out = tr_out test in
 (*
   let pp_fmt_base t = match Compile.get_fmt Cfg.hexa t with
-  | CType.Direct fmt -> 
+  | CType.Direct fmt ->
   if Cfg.hexa then "0x%" ^ fmt else fmt
   | CType.Macro fmt ->
   (if Cfg.hexa then "0x%\"" else "%\"") ^ fmt ^ "\"" in
@@ -318,7 +318,7 @@ module Make
           EPF.fi "Histogram (%i states)\n" [nstates]
 
         let cstring s = sprintf "%S" s
-            
+
         let postlude doc test affi show_topos stats =
           let t = if Cfg.exit_cond then "int" else "void" in
           O.o "#define ENOUGH 10" ;
@@ -328,6 +328,9 @@ module Make
               O.f "static %s postlude(FILE *out,cmd_t *cmd,hist_t *hist,count_t p_true,count_t p_false,tsc_t total) {" t
           | Mode.PreSi ->
               O.f "static %s postlude(FILE *out,global_t *g,count_t p_true,count_t p_false,tsc_t total) {" t ;
+              O.oi "hash_t *hash = &g->hash ;"
+          | Mode.Kvm ->
+              O.f "static %s postlude(global_t *g,count_t p_true,count_t p_false,tsc_t total) {" t ;
               O.oi "hash_t *hash = &g->hash ;"
           end ;
 (* Print header *)
@@ -348,6 +351,9 @@ module Make
           | Mode.PreSi ->
               pp_nstates "hash->nhash" ;
               O.oi "pp_hash(out,hash,g->verbose > 1,g->group);"
+          | Mode.Kvm ->
+              pp_nstates "hash->nhash" ;
+              O.oi "pp_hash(hash,g->verbose > 1,g->group);"
           end ;
 (* Print condition and witnesses *)
           if Cfg.kind then begin
@@ -399,7 +405,7 @@ module Make
                   O.fi "fprintf(out,\"%s\",\"%s\",\"%s\");" fmt "Prefetch" prf
               | NoPL|RandomPL -> ()
               end
-          | Mode.PreSi -> ()
+          | Mode.Kvm|Mode.PreSi -> ()
           end ;
 (* Affinity info, as computed *)
           begin match Cfg.mode with
@@ -412,7 +418,7 @@ module Make
                   O.oi "}"
               | None -> ()
               end
-          | Mode.PreSi -> ()
+          | Mode.Kvm|Mode.PreSi -> ()
           end ;
 (* Observation summary *)
           O.fi
@@ -429,7 +435,7 @@ module Make
             sprintf
               "Observation %s %%s %%PCTR %%PCTR\n"
               doc.Name.name  in
-          let obs = 
+          let obs =
             "!cond_true ? \"Never\" : !cond_false ? \"Always\" : \"Sometimes\""
           in
           EPF.fi fmt [obs;"cond_true";"cond_false";] ;
@@ -450,7 +456,7 @@ module Make
                 O.oiii "printf(\"Topology %-6\" PCTR \":> %s\\n\",ngroups[0],cmd->aff_topo);" ;
                 O.oii "}"
               end
-          | Mode.PreSi ->
+          | Mode.Kvm|Mode.PreSi ->
               O.oii "count_t *ngroups = &g->stats.groups[0];" ;
               O.oii "for (int k = 0 ; k < SCANSZ ; k++) {" ;
               O.oiii "count_t c = ngroups[k];" ;
@@ -493,9 +499,17 @@ module Make
             stats ;
           O.oi "}" ;
 (* Show running time *)
-          let fmt = sprintf "Time %s %%f\n"  doc.Name.name in
-          EPF.fi fmt ["total / 1000000.0"] ;
-          O.oi "fflush(out);" ;
+          begin match Cfg.mode with
+          | Mode.Std|Mode.PreSi ->
+              let fmt = sprintf "Time %s %%f\n"  doc.Name.name in
+              EPF.fi fmt ["total / 1000000.0"] ;
+              O.oi "fflush(out);"
+          | Mode.Kvm ->
+              let s = sprintf "Time %s "  doc.Name.name in
+              O.fi "puts(%S);" s ;
+              O.oi "emit_double(((double)total) / 1000000.0);" ;
+              O.oi "puts(\"\\n\");"
+          end ;
           if Cfg.exit_cond then O.oi "return cond;" ;
           O.o "}" ;
           O.o "" ;
