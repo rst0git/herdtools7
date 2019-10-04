@@ -74,9 +74,10 @@ open AArch64Base
 %token LDUMIN LDUMINA LDUMINL LDUMINAL LDUMINH LDUMINAH LDUMINLH LDUMINALH
 %token LDUMINB LDUMINAB LDUMINLB LDUMINALB
 %token STUMIN STUMINL STUMINH STUMINLH STUMINB STUMINLB
-%token IC DC IVAU
+%token IC DC IVAU TLBI
 %token <AArch64Base.IC.op> IC_OP
 %token <AArch64Base.DC.op> DC_OP
+%token <AArch64Base.TLBI.op> TLBI_OP
 %token <AArch64Base.sysreg> SYSREG
 %token MRS TST RBIT
 
@@ -672,6 +673,11 @@ instr:
   { I_DC (DC.({ funct=I; typ=VA; point=U; }),$4) }
 | DC DC_OP COMMA xreg
   { I_DC ($2,$4) }
+| TLBI TLBI_OP
+  { I_TLBI ($2, ZR) }
+| TLBI TLBI_OP COMMA xreg
+  { I_TLBI ($2, $4) }
+
 /* System register */
 | MRS xreg COMMA SYSREG
   { I_MRS ($2,$4) }
