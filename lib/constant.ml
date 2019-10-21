@@ -21,10 +21,9 @@ type 'scalar t =
 (* Memory cell, with optional tag and offet *)
   | Symbolic  of (string * string option) * int
   | Label of int * string     (* In code *)
-  | Tag of string
+  | Tag of string option
 
-let mk_sym s = Symbolic ((s,None),0)
-let default_tag = Tag "green"
+let mk_sym s = Symbolic ((s,None),0) 
 
 module type S =  sig
 
