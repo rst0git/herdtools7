@@ -31,14 +31,12 @@ type t =
   | WeakPredicated (* "Weak" predicated instructions, not performing non-selected events, aarch64 *)
 (* Tags *)
   | MemTag
-  | TagCheckPrecise
-  | TagCheckUnprecise
+  | HardFault
 
 let tags =
   ["success";"instr";"specialx0";"normw";"acqrelasfence";"backcompat";
    "fullscdepend";"splittedrmw";"switchdepscwrite";"lrscdiffok";
-   "mixed";"weakpredicated"; "memtag";
-   "tagcheckprecise"; "tagcheckunprecise"; ]
+   "mixed";"weakpredicated"; "memtag"; "hardfault"; ]
 
 let parse s = match Misc.lowercase s with
 | "success" -> Some Success
@@ -54,8 +52,7 @@ let parse s = match Misc.lowercase s with
 | "mixed" -> Some Mixed
 | "weakpredicated"|"weakpred" -> Some WeakPredicated
 | "tagmem"|"memtag" -> Some MemTag
-| "tagcheckprecise"|"precise" -> Some TagCheckPrecise
-| "tagcheckunprecise"|"unprecise" -> Some TagCheckUnprecise
+| "hardfault" -> Some HardFault
 | _ -> None
 
 let pp = function
@@ -72,9 +69,7 @@ let pp = function
   | Mixed -> "mixed"
   | WeakPredicated -> "WeakPredicated"
   | MemTag -> "memtag"
-  | TagCheckPrecise -> "TagCheckPrecise"
-  | TagCheckUnprecise -> "TagCheckUnprecise"
-
+  | HardFault -> "hardfault"
 
 let compare = compare
 
