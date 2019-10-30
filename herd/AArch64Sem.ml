@@ -54,6 +54,7 @@ module Make
       let (>>==) = M.(>>==)
       let (>>*=) = M.(>>*=)
       let (>>|) = M.(>>|)
+      let (>>||) = M.(>>||)
       let (>>!) = M.(>>!)
       let (>>::) = M.(>>::)
 
@@ -245,10 +246,13 @@ module Make
 
       let lift_memop mop ma ii =
         if memtag then
-          M.delay ma >>= fun (_a,ma) ->
-           delayed_check_tags ma ii
-              (mop (ma >>= fun a -> loc_extract a) >>! B.Next)
-              (ma >>= fun a -> mk_fault a ii >>! B.Exit)
+          M.delay ma >>= fun (_,ma) ->
+          let  mm = mop (ma >>= fun a -> loc_extract a) in
+          delayed_check_tags ma ii
+            (mm  >>! B.Next)
+            (let mfault = ma >>= fun a -> mk_fault a ii in
+            if C.precision then  mfault >>! B.Exit
+            else (mfault >>|| mm) >>! B.Next)
         else
           mop ma >>! B.Next
 
