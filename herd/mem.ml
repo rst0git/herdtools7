@@ -328,8 +328,8 @@ module Make(C:Config) (S:Sem.Semantics) : S with module S = S	=
         | Some (code,seen) -> add_code proc prog_order seen code
 
       and next_instr proc prog_order seen addr nexts b = match b with
-      | S.B.Exit when hardfault ->  EM.unitT ()
-      | S.B.Next|S.B.Exit -> add_code proc prog_order seen nexts
+      | S.B.Exit ->  EM.unitT ()
+      | S.B.Next -> add_code proc prog_order seen nexts
       | S.B.Jump lbl ->
           add_lbl proc prog_order seen addr lbl
       | S.B.CondJump (v,lbl) ->
