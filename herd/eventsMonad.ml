@@ -156,7 +156,7 @@ and type evt_struct = E.event_structure) =
             eiid,Evt.singleton (vcomp,acl@rtagcl@commitcl@compcl,es)
 
 (* Exchange combination *)
-    let exch : 'a t -> 'a t -> ('a -> 'b t) ->  ('a -> 'b t) ->  ('b * 'b) t
+    let exch : 'a t -> 'a t -> ('a -> 'b t) ->  ('a -> 'c t) ->  ('b * 'c) t
         = fun rx ry wx wy ->
           fun eiid ->
             let eiid,rxact = rx eiid in
@@ -322,12 +322,12 @@ and type evt_struct = E.event_structure) =
       let eiid,write_mem = write_mem addr resa data eiid in
       let (),cl_wres,es_wres = Evt.as_singleton cancel_res
       and (),cl_wresult,es_wresult =  Evt.as_singleton write_result
-      and (),cl_wmem,es_wmem =  Evt.as_singleton write_mem in
+      and r,cl_wmem,es_wmem =  Evt.as_singleton write_mem in
       let es =
         E.riscv_sc success
           es_resa es_data es_addr es_wres es_wresult es_wmem in
       eiid,
-      Evt.singleton ((),cl_resa@cl_data@cl_addr@cl_wres@cl_wresult@cl_wmem,es)
+      Evt.singleton (r,cl_resa@cl_data@cl_addr@cl_wres@cl_wresult@cl_wmem,es)
 
 (* AArch64 successful cas *)
     let aarch64_cas_ok
@@ -664,9 +664,10 @@ and type evt_struct = E.event_structure) =
            E.empty_event_structure)
 
 
-(***************)
-(* Mixed size  *)
-(***************)
+(**************)
+(* Mixed size *)
+(**************)
+
     module Mixed(SZ:ByteSize.S) = struct
 
       let memtag = C.variant Variant.MemTag
@@ -818,7 +819,7 @@ and type evt_struct = E.event_structure) =
                 (fun (eiid,es,sca) (loc,v) ->
                   match loc with
                   | A.Location_global
-                      (A.V.Val (Constant.Symbolic (s,0)) as a) ->
+                      (A.V.Val (Constant.Symbolic ((s,_),0)) as a) ->
                         let sz = A.look_size size_env s in
                         let ds = AM.explode sz v
                         and eas = AM.byte_eas sz a in
@@ -854,7 +855,9 @@ and type evt_struct = E.event_structure) =
 
       let initwrites =
         if A.is_mixed then initwrites_mixed else initwrites_non_mixed
+
     end
+
 (* Add an inequality constraint *)
     let neqT : V.v -> V.v -> unit t
         = fun v1 v2 ->
@@ -878,12 +881,6 @@ and type evt_struct = E.event_structure) =
                acc_inner)) (eiid,Evt.empty)
 
     let tooFar _msg = zeroT
-(*
-  fun eiid ->
-  eiid,
-  Evt.singleton
-  ((), [VC.Unroll msg],E.empty_event_structure)
- *)
 
     type evt_struct = E.event_structure
     type output = VC.cnstrnts * evt_struct

@@ -367,6 +367,13 @@ module Make(Cfg:Config) : XXXCompile_gen.S =
           let load_idx st rA rB idx = [ldr_idx rA rB idx],st
         end)
 
+    module LDG =
+      LOAD
+        (struct
+          let load = wrap_st ldg
+          let load_idx st rA rB idx = [ldg_idx rA rB idx],st
+        end)
+
     module OBS =
       LOAD
         (struct

@@ -138,7 +138,7 @@ module Generic (A : Arch_litmus.Base)
         | ConstrGen.LL _ -> env
 
       let type_final final env =
-        ConstrGen.fold_constr type_atom_final final env
+        ConstrGen.fold_constr type_atom final env
 
       let type_prop prop env = ConstrGen.fold_prop type_atom prop env
 
